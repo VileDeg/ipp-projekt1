@@ -2,7 +2,7 @@
 
 define('HEADER', 'IPPcode23'); //Header of IPPcode23 source file
 
-class Singleton { //Singleton pattern
+class Singleton { //Singleton pattern. Inspired by https://refactoring.guru/design-patterns/singleton/php/example
     private static $instances = [];
 
     protected function __construct() { } //Prevent direct creation of object
@@ -11,11 +11,11 @@ class Singleton { //Singleton pattern
 
     public static function getInstance() 
     {
-        $subclass = static::class;
-        if (!isset(self::$instances[$subclass])) {
-            self::$instances[$subclass] = new static();
+        $subClass = static::class;
+        if (!isset(self::$instances[$subClass])) {
+            self::$instances[$subClass] = new static();
         }
-        return self::$instances[$subclass];
+        return self::$instances[$subClass];
     }
 }
 
@@ -124,7 +124,6 @@ class Token {
 
 class Parser extends Singleton { 
     public $tokens; //Array of tokens
-    public $opcodeFound; //Was opcode found in current line?
 
     protected function __construct() {
         $this->tokens = [];
@@ -192,17 +191,21 @@ function exitprint($str, $code) { //Print error message and exit with error code
 }
 
 function parseCmdArguments() { //Parse command line arguments
-    static $helpText = "This is help text. TODO: !\n";
+    static $helpText = "Name:\n\t".
+        "parse.php - IPPcode23 code parser.\n\n".
+        "Usage:\n\tparse.php [--help]\n\nDescription:\n\t".
+        "Parses IPPcode23 source code. Checks for lexical and syntax errors. Input from STDIN.\n\n".
+        "Options:\n\t--help\n\t\tPrints the help message.\n";
 
     $longopts  = array("help");
-    $shortopts  = "";
-    $options = getopt($shortopts, $longopts);
+    $options = getopt(NULL, $longopts);
 
     if (!empty($options)) {
-        if (count($longopts) == 1 && $longopts[0] != 'help') {
+        if (count($options) == 1 && array_key_exists('help', $options)) {
             echo $helpText;
+            exit(0);
         } else {
-            exitprint("Invalid arguments for the script.", 10);
+            exitprint("Invalid command line arguments.", 10);
         }
     }
 }
