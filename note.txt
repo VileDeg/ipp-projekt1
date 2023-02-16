@@ -1,0 +1,4 @@
+var - 0
+symb - 1
+label - 2
+type - 3
