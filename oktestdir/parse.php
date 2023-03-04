@@ -75,12 +75,12 @@ class Token {
     function testArgument($argi, &$argtk) {
         static $specreg = '_\-$&%*!?';
         $idreg = '['.$specreg.'a-z]['.$specreg.'\w]*';
-        $varreg = '/^[GLT]F@'.$idreg.'$/u';
+        $varreg = '/^[GLT]F@'.$idreg.'$/iu';
         
         $argtype = $this->args[$argi];
-        //$argstr = $argtk->str;
+        $argstr = $argtk->str;
         $argtk->type = $argtype;
-        $argtk->value = $argtk->str;
+        $argtk->value = $argstr;
 
         if ($argtype != 'label' && $argtk->isopcode) {
             return false; //invalid argument error
@@ -88,25 +88,25 @@ class Token {
 
         switch ($argtype) {
             case 'var':
-                return preg_match($varreg, $argtk->str);
+                return preg_match($varreg, $argstr);
             case 'type':
-                return preg_match('/^(int|bool|string|nil)$/u', $argtk->str);
+                return preg_match('/^(int|bool|string|nil)$/u', $argstr);
             case 'label':
-                return preg_match('/^'.$idreg.'$/iu', $argtk->str);
+                return preg_match('/^'.$idreg.'$/iu', $argstr);
             case 'symb':
-                if (preg_match('/^int@[+-]?\d+$/u', $argtk->str)) {
+                if (preg_match('/^int@[+-]?\d+$/u', $argstr)) {
                     $argtk->type = 'int';
-                    $argtk->value = substr($argtk->str, 4);
-                } else if (preg_match('/^bool@(true|false)$/u', $argtk->str)) {
+                    $argtk->value = substr($argstr, 4);
+                } else if (preg_match('/^bool@(true|false)$/u', $argstr)) {
                     $argtk->type = 'bool';
-                    $argtk->value = substr($argtk->str, 5);
-                } else if (preg_match('/^string@([^\\\\\s#]|\\\\\d{3})*$/u', $argtk->str)) {
+                    $argtk->value = substr($argstr, 5);
+                } else if (preg_match('/^string@([^\\\\\s#]|\\\\\d{3})*$/u', $argstr)) {
                     $argtk->type = 'string';
-                    $argtk->value = substr($argtk->str, 7);
-                } else if (preg_match('/^nil@nil$/u', $argtk->str)) {
+                    $argtk->value = substr($argstr, 7);
+                } else if (preg_match('/^nil@nil$/u', $argstr)) {
                     $argtk->type = 'nil';
-                    $argtk->value = substr($argtk->str, 4);
-                } else if (preg_match($varreg, $argtk->str)) { //Variable
+                    $argtk->value = substr($argstr, 4);
+                } else if (preg_match($varreg, $argstr)) { //Variable
                     $argtk->type = 'var';
                 } else {
                     return false;

@@ -1,0 +1,15 @@
+Archive:  xgonce00.zip
+  inflating: parse.php               
+  inflating: readme1.md              
+Name:
+	parse.php - IPPcode23 code parser.
+
+Usage:
+	parse.php [--help]
+
+Description:
+	Parses IPPcode23 source code. Checks for lexical and syntax errors. Input from STDIN.
+
+Options:
+	--help
+		Prints the help message.
