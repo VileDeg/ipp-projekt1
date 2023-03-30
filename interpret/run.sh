@@ -1,0 +1,1 @@
+python3 interpret.py --source=src.xml
