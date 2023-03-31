@@ -51,48 +51,6 @@ class Expression:
         self.type = type
         self.value = value
 
-class FrameStack:
-    def __init__(self):
-        self._stack      = []
-        self._glob_frame = {}
-        self._tmp_frame  = {}
-    
-    def _get_frame(self, var: str):
-        pref = var[0:2]
-        if pref == "TF":
-            return self._tmp_frame
-        elif pref == "LF":
-            return self._stack[-1]
-        elif pref == "GF":
-            return self._glob_frame
-
-    def is_var_defined(self, var: str):
-        return var[3:] in self._get_frame(var)
-
-    def define_var(self, var: str):
-        self._get_frame(var)[var[3:]] = Expression(None, None)
-
-    def set_var_type(self, var: str, type: str):
-        self._get_frame(var)[var[3:]].type = type
-
-    def set_var_value(self, var: str, value):
-        self._get_frame(var)[var[3:]].value = value
-
-    def get_var_type(self, var: str):
-        return self._get_frame(var)[var[3:]].type
-    
-    def get_var_value(self, var: str):
-        return self._get_frame(var)[var[3:]].value
-    
-    def new_tmp_frame(self):
-        self._tmp_frame = {}
-
-    def push_tmp_frame(self):
-        self._stack.append(self._tmp_frame)
-        self._tmp_frame = {}
-
-    def pop_tmp_frame(self):
-        self._tmp_frame = self._stack.pop()
 
 class Interpreter(metaclass=Singleton):
     def __init__(self):
@@ -100,7 +58,9 @@ class Interpreter(metaclass=Singleton):
         self._instructions = []
         self._error_code   = 0
 
-        self._frame_stack  = FrameStack()
+        self._stack      = []
+        self._glob_frame = {}
+        self._tmp_frame  = {}
     
     def _validate_xml(self, xml_tree: et.ElementTree):
         extxt = "invalid xml"
@@ -143,19 +103,19 @@ class Interpreter(metaclass=Singleton):
             order = int(inst.attrib['order'])
             opcode = inst.attrib['opcode']
 
-        try:
             inst_obj = Instruction(order, opcode)
 
             for arg in inst:
                 arg_type = arg.attrib['type']
                 value = arg.text
-                inst_obj.add_operand(arg_type, value)
-        except BaseException:
-            self._error_code = 32
-            raise
+                try:
+                    inst_obj.add_operand(arg_type, value)
+                except BaseException:
+                    self._error_code = 32
+                    raise
 
-        self._instructions.append(inst_obj)
-
+            self._instructions.append(inst_obj)
+                
         # sort intructions by order
         self._instructions.sort(key=lambda x: x.order)
 
@@ -174,38 +134,78 @@ class Interpreter(metaclass=Singleton):
         except BaseException:
             raise
 
+    def _get_frame(self, var: str):
+        pref = var[0:2]
+        if pref == "TF":
+            return self._tmp_frame
+        elif pref == "LF":
+            return self._stack[-1]
+        elif pref == "GF":
+            return self._glob_frame
+        
+    def _get_var(self, var: str):
+        return self._get_frame(var)[var[3:]]
+
+    def _is_var_declared(self, var: str):
+        return var[3:] in self._get_frame(var)
+
+    def _is_var_defined(self, var: str):
+        return self._is_var_declared(var) and self._get_var(var).value != None
+
+
+    # def set_var_type(self, var: str, type: str):
+    #     self._get_var(var).type = type
+
+    # def set_var_value(self, var: str, value):
+    #     self._get_var(var).value = value
+
+    # def get_var_type(self, var: str):
+    #     return self._get_var(var).type
+    
+    # def get_var_value(self, var: str):
+    #     return self._get_var(var).value
+    
+    
     def _i_move(self, i: Instruction):
-        pass
+        if i.arg1.type != "var":
+            raise Exception("Invalid argument type")
+        
+        if not self._is_var_declared(i.arg1.text):
+            raise Exception("Variable not declared")
 
     def _i_createframe(self, _: Instruction):
-        self._frame_stack.new_tmp_frame()
+        self._tmp_frame = {}
 
     def _i_pushframe(self, _: Instruction):
-        self._frame_stack.push_tmp_frame()
+        self._stack.append(self._tmp_frame)
+        self._tmp_frame = {}
 
     def _i_popframe(self, _: Instruction):
-        self._frame_stack.pop_tmp_frame()
+        self._tmp_frame = self._stack.pop()
 
     def _i_defvar(self, i: Instruction):
-        self._tmp_frame[i.arg1.text] = Expression(i.arg1.type, None)
+        if i.arg1.type != "var":
+            raise Exception("Invalid argument type")
+        var = i.arg1.text
+        self._get_frame(var)[var[3:]] = Expression(None, None)
     
-    def __get_var_val(self, var: str):
-        if not self._frame_stack.is_var_defined(var):
-            return None
-        return self._frame_stack.get_var_value(var)
+    def __get_var_try(self, var: str):
+        if not self._is_var_defined(var):
+            raise Exception("Variable not defined")
+        return self._get_var(var)
 
     def __var_symb_symb(self, i: Instruction):
-        if self.__get_var_val(i.arg1.text) == None:
+        if not self._is_var_defined(i.arg1.text):
             raise Exception("Variable not defined")
         
         v1 = Expression(i.arg2.type, i.arg2.text)
         v2 = Expression(i.arg3.type, i.arg3.text)
 
         if i.arg2.type == "var":
-            v1 = self.__get_var_val(i.arg2.text)
+            v1 = self.__get_var_try(i.arg2.text)
 
         if i.arg3.type == "var":
-            v2 = self.__get_var_val(i.arg3.text)
+            v2 = self.__get_var_try(i.arg3.text)
 
         return v1, v2
 
@@ -216,15 +216,15 @@ class Interpreter(metaclass=Singleton):
             raise Exception("Invalid argument type")
 
         varname = i.arg1.text
-        self._frame_stack.set_var_type(varname, "int")
+        self.set_var_type(varname, "int")
         if   op == "add":
-            self._frame_stack.set_var_value(varname, int(v1.value) + int(v2.value))
+            self.set_var_value(varname, int(v1.value) + int(v2.value))
         elif op == "sub":
-            self._frame_stack.set_var_value(varname, int(v1.value) - int(v2.value))
+            self.set_var_value(varname, int(v1.value) - int(v2.value))
         elif op == "mul":
-            self._frame_stack.set_var_value(varname, int(v1.value) * int(v2.value))
+            self.set_var_value(varname, int(v1.value) * int(v2.value))
         elif op == "idiv":
-            self._frame_stack.set_var_value(varname, int(v1.value) // int(v2.value))
+            self.set_var_value(varname, int(v1.value) // int(v2.value))
         else:
             raise Exception("Invalid operation")
     
