@@ -1,0 +1,3 @@
+.IPPcode23  # nacteni vstupu a vypis
+DEFVAR GF@a
+ADD GF@a GF@a int@1

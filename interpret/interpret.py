@@ -6,9 +6,8 @@ from interp_classes import *
 def open_file(file_name: str, mode: str):
     try:
         f = open(file_name, mode, encoding="UTF-8")
-    except IOError as e:
-        print("Error: " + str(e), file=sys.stderr)
-        exit(11)
+    except IOError:
+        raise
     return f
 
 def parse_args():
@@ -20,28 +19,29 @@ def parse_args():
                         help="Source code file (default: stdin)")
     args = parser.parse_args()
     if args.input == sys.stdin and args.source == sys.stdin:
-        print("Error: " + "At least one of --input or --source must be specified", file=sys.stderr)
-        exit(10)
+        raise Exception("At least one of --input or --source must be specified")
     return args
 
 if __name__ == '__main__':
     # Parse arguments
-    args = parse_args()
-    input_file  = open_file(args.input , "r") if args.input  != sys.stdin else sys.stdin
-    source_file = open_file(args.source, "r") if args.source != sys.stdin else sys.stdin
+    try:
+        args = parse_args()
+    except BaseException as e:
+        print("Error: " + str(e), file=sys.stderr)
+        exit(10)
 
-    if args.source != sys.stdin:
-        try:
-            source_file = open(args.source, "r")
-        except IOError as e:
-            print("Error: " + str(e), file=sys.stderr)
-            exit(11)
-    
+    try:    
+        input_file  = open_file(args.input , "r") if args.input  != sys.stdin else sys.stdin
+        source_file = open_file(args.source, "r") if args.source != sys.stdin else sys.stdin
+    except BaseException as e:
+        print("Error: " + str(e), file=sys.stderr)
+        exit(11)
+
     intepreter_obj = Interpreter()
     try:
         intepreter_obj.initialize(source_file)
+        intepreter_obj.run()
     except BaseException as e:
         print("Error: " + str(e), file=sys.stderr)
         exit(intepreter_obj.error_code())
     
-    intepreter_obj.run()
