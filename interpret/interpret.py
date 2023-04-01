@@ -1,7 +1,7 @@
 import sys
 import argparse
 
-from interp_classes import *
+import interp
 
 def open_file(file_name: str, mode: str):
     try:
@@ -37,11 +37,10 @@ if __name__ == '__main__':
         print("Error: " + str(e), file=sys.stderr)
         exit(11)
 
-    intepreter_obj = Interpreter()
     try:
-        intepreter_obj.initialize(source_file)
-        intepreter_obj.run()
+        interp.initialize(source_file)
+        interp.run()
     except BaseException as e:
         print("Error: " + str(e), file=sys.stderr)
-        exit(intepreter_obj.error_code())
+        exit(interp.error.code)
     
