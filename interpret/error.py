@@ -18,15 +18,15 @@ g = sys.modules[__name__]
 @err_call
 def xmlformat():
     g.code = 31
-    raise Exception("XML format error")
+    raise Exception("XML format")
 @err_call
 def xmlstruct(txt: str = ""):
     g.code = 32
-    raise Exception("XML structure error: " + txt)
+    raise Exception("XML structure: " + txt)
 @err_call
-def sembase():
+def sembase(txt: str = ""):
     g.code = 52
-    raise Exception("Semantic (label/variable)")
+    raise Exception("Semantic (label/variable): " + txt)
 @err_call
 def argtype():
     g.code = 53
@@ -50,8 +50,8 @@ def badval():
 @err_call
 def badstr():
     g.code = 58
-    raise Exception("String error:") #TODO: description
+    raise Exception("String:") #TODO: description
 @err_call
 def intern():
     g.code = 99
-    raise Exception("Internal error")
+    raise Exception("Internal")

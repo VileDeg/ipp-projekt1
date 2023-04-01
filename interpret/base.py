@@ -3,7 +3,7 @@ import re
 import sys
 import xml.etree.ElementTree as et
 
-from interp_classes import *
+from classes import *
 
 import error
 import globals as g
@@ -14,22 +14,19 @@ def log(s):
     if DEBUG:
         print(s)
     
-def validate_xml(xml_tree: et.ElementTree):
+def parse_xml(xml_tree: et.ElementTree):
     prog = xml_tree.getroot()
-    #log(f"{prog.tag=}")
     if prog.tag != "program":
         error.xmlstruct()
     ra = list(prog.attrib.keys())
-    #log(f"{ra=}")
-    if not('language' in ra) and prog.attrib['language'] != "IPPcode23": # TODO: description, name
+    # TODO: description, name?
+    if not('language' in ra) and prog.attrib['language'] != "IPPcode23":
         error.xmlstruct()
     
     for inst in prog:
-        #log(f"\t{inst.tag=}")
         if inst.tag != "instruction":
             error.xmlstruct()
         ca = list(inst.attrib.keys())
-        #log(f"\t{ca=}")
         if not('order' in ca) or not('opcode' in ca):
             error.xmlstruct()
         try:
@@ -43,44 +40,45 @@ def validate_xml(xml_tree: et.ElementTree):
         if opcode not in g.opcodes:
             error.xmlstruct("Invalid opcode")
 
+        # create instruction object
+        inst_obj = Instruction(order, opcode)
+
+        arglist = []
         argc = 1
         for arg in inst:
-            #log(f"\t\t{arg.tag=}")
-            if argc > 3:
+            if argc > g.opcodes[opcode]:
                 error.xmlstruct("Too many arguments")
-            if arg.tag != "arg"+str(argc):
+            if not re.match(r"arg[1-3]", arg.tag):
                 error.xmlstruct("Invalid argument tag")
             sa = list(arg.attrib.keys())
-            #log(f"\t\t{sa=}")
             if not('type' in sa):
                 error.xmlstruct()
                 
-            arg_type = arg.attrib['type'].lower()
+            arg_type = arg.attrib['type'] #.lower()
             if arg_type not in ["int", "bool", "string", "nil", "label", "type", "var"]:
                 error.xmlstruct("Invalid argument type")
 
+            arglist.append((arg_type, arg.text, int(arg.tag[3])))
+
             argc += 1
-            
-            #log(f"\t\t{arg.text=}")
-    return prog
+        if argc - 1 < g.opcodes[opcode]:
+            error.xmlstruct("Too few arguments")
 
-def fill_instructions(prog: et.ElementTree):
-    for inst in prog:
-        order  = int(inst.attrib['order'])
-        opcode = inst.attrib['opcode']
+        arglist.sort(key=lambda x: x[2])
 
-        inst_obj = Instruction(order, opcode)
-
-        for arg in inst:
-            arg_type = arg.attrib['type']
-            value = arg.text
+        argc = 1
+        for triple in arglist:
+            if triple[2] != argc:
+                error.xmlstruct("Invalid argument order")
+            # add operand to instruction
             try:
-                inst_obj.add_operand(arg_type, value)
+                inst_obj.add_operand(triple[0], triple[1])
             except Exception as e:
-                error.xmlstruct(str(e))
-
+                error.xmlstruct(str(e))            
+            argc += 1
+        # add instruction to list
         g.instructions.append(inst_obj)
-            
+    
     # check for duplicates in instruction orders
     orders = [i.order for i in g.instructions]
     if len(orders) != len(set(orders)):
@@ -96,47 +94,44 @@ def initialize(source_file: io.TextIOWrapper):
     except:
         error.xmlformat()
 
-    prog = validate_xml(xml_tree)
+    parse_xml(xml_tree)
 
-    fill_instructions(prog)
-
-def get_frame(var: str):
-    pref = var[0:2]
-    if pref == "TF":
+def get_frame(op: Operand):
+    if   op.frame == Frame.TEMPORARY:
         if g.temp_frame == None:
             error.frame()
         return g.temp_frame
-    elif pref == "LF":
+    elif op.frame == Frame.LOCAL:
         if len(g.frame_stack) == 0:
             error.frame()
         return g.frame_stack[-1]
-    elif pref == "GF":
+    elif op.frame == Frame.GLOBAL:
         return g.glob_frame
     else:
-        error.frame()
+        error.intern()
     
-def get_var(var: str):
-    return get_frame(var)[var[3:]]
+def get_var(op: Operand):
+    return get_frame(op)[op.val]
 
-def is_var_declared(var: str):
-    return var[3:] in get_frame(var)
+def is_var_declared(op: Operand):
+    return op.val in get_frame(op)
 
-def is_var_defined(var: str):
-    return is_var_declared(var) and get_var(var).value != None
+def is_var_defined(op: Operand):
+    return is_var_declared(op) and get_var(op).val != None
 
-def get_var_if_def(var: str):
-    if not is_var_defined(var):
+def get_var_if_def(op: Operand):
+    if not is_var_defined(op):
         error.novar()
-    return get_var(var)
+    return get_var(op)
 
 def symb(op: Operand):
     if op.type == "var":
-        return get_var_if_def(op.text)
+        return get_var_if_def(op)
     else:
-        return Expression(op.type, op.text)
+        return Expression(op.type, op.val)
 
 def var_symb(i: Instruction):
-    if not is_var_declared(i.arg1.text):
+    if not is_var_declared(i.arg1):
         error.novar()
     
     v1 = symb(i.arg2)
@@ -155,18 +150,17 @@ def arithm(i: Instruction, op: str):
     if v1.type != "int" or v2.type != "int":
         error.argtype()
 
-    var = i.arg1.text
-    get_var(var).type = "int"
+    get_var(i.arg1).type = "int"
     if   op == "add":
-        get_var(var).value = int(v1.value) + int(v2.value)
+        get_var(i.arg1).val = v1.val + v2.val
     elif op == "sub":
-        get_var(var).value = int(v1.value) - int(v2.value)
+        get_var(i.arg1).val = v1.val - v2.val
     elif op == "mul":
-        get_var(var).value = int(v1.value) * int(v2.value)
+        get_var(i.arg1).val = v1.val * v2.val
     elif op == "idiv":
-        if int(v2.value) == 0:
+        if v2.val == 0:
             error.badval()
-        get_var(var).value = int(v1.value) // int(v2.value)
+        get_var(i.arg1).val = v1.val // v2.val
     else:
         error.intern()
 
@@ -178,13 +172,12 @@ def relational(i: Instruction, op: str):
     if v1.type != "int" and v1.type != "string" and v1.type != "bool":
         error.argtype()
     
-    var = i.arg1.text
     if   op == "lt":
-        get_var(var).value = v1.value < v2.value
+        get_var(i.arg1).val = v1.val < v2.val
     elif op == "gt":
-        get_var(var).value = v1.value > v2.value
+        get_var(i.arg1).val = v1.val > v2.val
     elif op == "eq":
-        get_var(var).value = v1.value == v2.value
+        get_var(i.arg1).val = v1.val == v2.val
     else:
         error.intern()
 
@@ -194,19 +187,32 @@ def and_or(i: Instruction, op: str):
     if v1.type != "bool" or v2.type != "bool":
         error.argtype()
     
-    var = i.arg1.text
     if   op == "and":
-        get_var(var).value = v1.value and v2.value
+        get_var(i.arg1).val = v1.val and v2.val
     elif op == "or":
-        get_var(var).value = v1.value or  v2.value
+        get_var(i.arg1).val = v1.val or  v2.val
     else:
         error.intern()
 
 import instructions as I
 
+def label_pass():
+    for inst in g.instructions:
+        if inst.opcode == "label":
+            I.ilabel(inst)
+            # if inst.arg1.val in g.labels:
+            #     error.sembase("Label already defined")
+            # g.labels[inst.arg1.val] = inst.order
+
 def run():
+    label_pass()
+
     while g.inst_index < len(g.instructions):
         inst = g.instructions[g.inst_index]
+        if inst.opcode == "label":
+            g.inst_index += 1
+            continue
+
         try:
             getattr(I, "i"+inst.opcode.lower())(inst)
         except Exception:
