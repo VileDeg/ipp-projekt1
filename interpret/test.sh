@@ -1,4 +1,4 @@
 php8.1 test.php \
---directory=../ipp-2023-tests/interpret-only/curr \
+--directory=../ipp-2023-tests/interpret-only/jumps \
 --recursive \
---int-script=interpret.py --int-only > out.md
+--int-script=interpret.py --int-only > out.html

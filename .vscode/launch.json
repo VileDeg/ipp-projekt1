@@ -12,8 +12,8 @@
 			"env": {},
 			"stopOnEntry": false,
 			
-			"justMyCode": true,
-			"postDebugTask": "print_exit_code"
+			"justMyCode": true
+			//"postDebugTask": "print_exit_code"
         }
     ]
 	

@@ -1,8 +1,5 @@
 class Operand:
     def __init__(self, type: str, text: str):
-        if type not in ["int", "bool", "string", "nil", "label", "type", "var"]:
-            raise Exception("Invalid operand type")
-
         if type == "int":
             try:
                 int(text)
@@ -35,3 +32,9 @@ class Expression:
     def __init__(self, type: str, value):
         self.type = type
         self.value = value
+
+        if type == "int":
+            self.value = int(value)
+        elif type == "bool":
+            self.value = True if value == "true" else False
+        

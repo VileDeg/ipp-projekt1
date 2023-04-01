@@ -20,7 +20,7 @@ def xmlformat():
     g.code = 31
     raise Exception("XML format error")
 @err_call
-def xmlstruct(txt: str):
+def xmlstruct(txt: str = ""):
     g.code = 32
     raise Exception("XML structure error: " + txt)
 @err_call
