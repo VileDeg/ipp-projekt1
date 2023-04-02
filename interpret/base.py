@@ -96,6 +96,8 @@ def initialize(input_file: io.TextIOWrapper, source_file: io.TextIOWrapper):
         error.xmlformat()
 
     parse_xml(xml_tree)
+    g.stack_var = Operand("var", "GF@.STACK_RET")
+    g.glob_frame[g.stack_var.val] = Expression(None, None)
 
 def get_frame(op: Operand):
     if   op.frame == Frame.TEMPORARY:
@@ -112,32 +114,43 @@ def get_frame(op: Operand):
         error.intern()
     
 def get_var(op: Operand):
-    return get_frame(op)[op.val]
+    try:
+        return get_frame(op)[op.val]
+    except KeyError:
+        error.novar() 
 
-def is_var_declared(op: Operand):
-    return op.val in get_frame(op)
+# def is_var_declared(op: Operand):
+#     return op.val in get_frame(op)
 
 def is_var_defined(op: Operand):
-    return is_var_declared(op) and get_var(op).val != None
+    #if is_var_declared(op):
+    return get_var(op).val != None
 
-def get_var_if_def(op: Operand):
-    if not is_var_defined(op):
-        error.novar()
+def get_var_if_def(op: Operand, declared_only):
+    # if not is_var_declared(op):
+    #     error.novar()
+    if not declared_only and not is_var_defined(op):
+        error.noval()
     return get_var(op)
 
-def symb(op: Operand):
+def symb(op: Operand, declared_only=False):
     if op.type == "var":
-        return get_var_if_def(op)
+        return get_var_if_def(op, declared_only)
     else:
         return Expression(op.type, op.val)
 
 def var_symb(i: Instruction):
-    if not is_var_declared(i.arg1):
-        error.novar()
+    #if not is_var_declared(i.arg1):
+    #    error.novar()
     
+    # Added check for var type TODO:
+    if i.arg1.type != "var":
+        error.argtype()
+
     v1 = symb(i.arg2)
 
     return v1
+
 
 def var_symb_symb(i: Instruction):
     v1 = var_symb(i)
@@ -145,12 +158,34 @@ def var_symb_symb(i: Instruction):
 
     return v1, v2
 
+def nil_conv(v1: Operand, v2: Operand):
+    # if v2.type == "int":
+    #     v1.type = "int"
+    #     v1.val = 0
+    # elif v2.type == "float":
+    #     v1.type = "float"
+    #     v1.val = 0.0
+    if v2.type == "bool":
+        v1.type = "bool"
+        v1.val = False
+    elif v2.type == "string":
+        v1.type = "string"
+        v1.val = ""
+
+def symb_symb_nil_conv(v1: Operand, v2: Operand):
+    if v1.type == "nil":
+        nil_conv(v1, v2)
+    elif v2.type == "nil":
+        nil_conv(v2, v1)
+
 def arithm(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
+
+    #symb_symb_nil_conv(v1, v2)
     
     if v1.type != v2.type:
         error.argtype()
-    if v1.type != "int" or v1.type != "float":
+    if v1.type != "int" and v1.type != "float":
         error.argtype()
 
     get_var(i.arg1).type = v1.type
@@ -178,11 +213,18 @@ def arithm(i: Instruction, op: str):
 def relational(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
 
+    get_var(i.arg1).type = "bool"
+
+    if op == "eq":
+        if v1.type == "nil" or v2.type == "nil":
+            get_var(i.arg1).val = v1.type == v2.type
+            return
+
     if v1.type != v2.type:
         error.argtype()
     if v1.type != "int" and v1.type != "string" and v1.type != "bool":
         error.argtype()
-    
+
     if   op == "lt":
         get_var(i.arg1).val = v1.val < v2.val
     elif op == "gt":
@@ -195,15 +237,31 @@ def relational(i: Instruction, op: str):
 def and_or(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
 
+    #symb_symb_nil_conv(v1, v2)
+
     if v1.type != "bool" or v2.type != "bool":
         error.argtype()
     
+    get_var(i.arg1).type = "bool"
     if   op == "and":
         get_var(i.arg1).val = v1.val and v2.val
     elif op == "or":
         get_var(i.arg1).val = v1.val or  v2.val
     else:
         error.intern()
+
+def stack_inst(func, i: Instruction, argc: int):
+    i.arg1 = g.stack_var
+    if   argc == 1:
+        i.arg2 = g.data_stack.pop()
+    elif argc == 2:
+        i.arg3 = g.data_stack.pop()
+        i.arg2 = g.data_stack.pop()
+    elif argc == 3:
+        error.intern("Too many arguments for stack instruction")
+    func(i)
+    g.data_stack.append(get_var(i.arg1))
+
 
 import instructions as I
 

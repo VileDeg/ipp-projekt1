@@ -2,21 +2,21 @@ from classes import *
 from base import *
 
 def imove(i: Instruction):
-    if i.arg1.type != "var":
-        error.argtype()
+    v1 = symb(i.arg2)
+    get_var(i.arg1).type = v1.type
+    get_var(i.arg1).val = v1.val
+    # if not is_var_declared(i.arg1):
+    #     error.novar()
     
-    if not is_var_declared(i.arg1):
-        error.novar()
-    
-    if i.arg2.type == "var":
-        if not is_var_declared(i.arg1):
-            error.novar()
-        if not is_var_defined(i.arg2):
-            error.noval()
-        get_var(i.arg1).val = get_var(i.arg2).val
-    else:
-        get_var(i.arg1).type  = i.arg2.type
-        get_var(i.arg1).val = i.arg2.val
+    #if i.arg2.type == "var":
+        # if not is_var_declared(i.arg1):
+        #     error.novar()
+    #     if not is_var_defined(i.arg2):
+    #         error.noval()
+    #     get_var(i.arg1).val = get_var(i.arg2).val
+    # else:
+    #     get_var(i.arg1).type  = i.arg2.type
+    #     get_var(i.arg1).val = i.arg2.val
 
 def icreateframe(_: Instruction):
     g.temp_frame = {}
@@ -50,8 +50,8 @@ def ipushs(i: Instruction):
 def ipops(i: Instruction):
     if i.arg1.type != "var":
         error.argtype()
-    if not is_var_declared(i.arg1):
-        error.novar()
+    # if not is_var_declared(i.arg1):
+    #     error.novar()
     if len(g.data_stack) == 0:
         error.noval()
     top = g.data_stack.pop()
@@ -69,6 +69,9 @@ def imul(i: Instruction):
 
 def iidiv(i: Instruction):
     arithm(i, "idiv")
+
+def idiv(i: Instruction):
+    arithm(i, "div")
 
 def ilt(i: Instruction):
     relational(i, "lt")
@@ -91,8 +94,8 @@ def inot(i: Instruction):
     if v1.type != "bool":
         error.argtype()
     
-    var = i.arg1
-    get_var(var).val = not v1.val
+    get_var(i.arg1).type = "bool"
+    get_var(i.arg1).val = not v1.val
 
 def iint2char(i: Instruction):
     v1 = var_symb(i)
@@ -122,17 +125,17 @@ def istri2int(i: Instruction):
 
 def iread(i: Instruction):
     var = i.arg1
-    if not is_var_declared(var):
-        error.novar()
+    # if not is_var_declared(var):
+    #     error.novar()
 
     inpstr = g.input_file.readline().strip()
+    get_var(var).val  = inpstr
     if inpstr == "": # Error
         get_var(var).type = "nil"
         return
     
     type = i.arg2.val
     get_var(var).type = type
-    get_var(var).val  = inpstr
 
     if   type == "int":
         try:
@@ -151,6 +154,14 @@ def iread(i: Instruction):
             get_var(var).val = parse_string(inpstr)
         except Exception: # Error
             get_var(var).type = "nil"
+    elif type == "float":
+        try:
+            get_var(var).val = float.fromhex(inpstr)
+        except Exception: # Error
+            try:
+                get_var(var).val = float(inpstr)
+            except ValueError:
+                get_var(var).type = "nil"
     else:
         error.badval() # TODO: maybe argtype?
 
@@ -159,6 +170,8 @@ def iwrite(i: Instruction, outstream=sys.stdout):
     out = ""
     if   v1.type == "int" or v1.type == "string":
         out = v1.val
+    elif v1.type == "float":
+        out = str(float.hex(v1.val))
     elif v1.type == "bool":
         out = str(v1.val).lower()
     elif v1.type == "nil":
@@ -213,11 +226,14 @@ def isetchar(i: Instruction):
         error.badstr()
 
 def itype(i: Instruction):
-    v1 = symb(i.arg2)
-    typestr = v1.type
-
     var = i.arg1
-    if not is_var_defined(var):
+    # if not is_var_declared(var):
+    #     error.novar()
+
+    v1 = symb(i.arg2, True)
+
+    typestr = v1.type
+    if typestr == None:
         typestr = ""
 
     get_var(var).type  = "string"
@@ -240,6 +256,11 @@ def ijump(i: Instruction):
 
 def ijumpifeq(i: Instruction):
     v1, v2 = symb(i.arg2), symb(i.arg3)
+    if v1.type == "nil" or v2.type == "nil":
+        if v1.type == v2.type:
+            ijump(i)
+        return
+
     if v1.type != v2.type: # TODO: nil
         error.argtype()
     if v1.val == v2.val:
@@ -247,6 +268,11 @@ def ijumpifeq(i: Instruction):
 
 def ijumpifneq(i: Instruction):
     v1, v2 = symb(i.arg2), symb(i.arg3)
+    if v1.type == "nil" or v2.type == "nil":
+        if v1.type != v2.type:
+            ijump(i)
+        return
+
     if v1.type != v2.type: # TODO: nil
         error.argtype()
     if v1.val != v2.val:
@@ -279,3 +305,75 @@ def ibreak():
     for name, var in g.temp_frame.items():
         print(f"\t{name}: {var.type} {var.val}")
     print("=== END OF BREAK ===")
+
+def iint2float(i: Instruction):
+    v1 = symb(i.arg2)
+    if v1.type != "int":
+        error.argtype()
+    get_var(i.arg1).type = "float"
+    get_var(i.arg1).val = float(v1.val)
+
+def ifloat2int(i: Instruction):
+    v1 = symb(i.arg2)
+    if v1.type != "float":
+        error.argtype()
+    get_var(i.arg1).type = "int"
+    get_var(i.arg1).val = int(v1.val)
+
+def iclears(_: Instruction):
+    g.data_stack.clear()
+
+def iadds(i: Instruction):
+    stack_inst(iadd, i, 2)
+
+def isubs(i: Instruction):
+    stack_inst(isub, i, 2)
+
+def imuls(i: Instruction):
+    stack_inst(imul, i, 2)
+
+def iidivs(i: Instruction):
+    stack_inst(iidiv, i, 2)
+
+def idivs(i: Instruction):
+    stack_inst(idiv, i, 2)
+
+def ilts(i: Instruction):
+    stack_inst(ilt, i, 2)
+
+def igts(i: Instruction):
+    stack_inst(igt, i, 2)
+
+def ieqs(i: Instruction):
+    stack_inst(ieq, i, 2)
+
+def iands(i: Instruction):
+    stack_inst(iand, i, 2)
+
+def iors(i: Instruction):
+    stack_inst(ior, i, 2)
+
+def inots(i: Instruction):
+    stack_inst(inot, i, 1)
+
+def iint2chars(i: Instruction):
+    stack_inst(iint2char, i, 1)
+
+def istri2ints(i: Instruction):
+    stack_inst(istri2int, i, 2)
+
+def ijumpifeqs(i: Instruction):
+    i.arg3 = g.data_stack.pop()
+    i.arg2 = g.data_stack.pop()
+    ijumpifeq(i)
+
+def ijumpifneqs(i: Instruction):
+    i.arg3 = g.data_stack.pop()
+    i.arg2 = g.data_stack.pop()
+    ijumpifneq(i)
+
+def iint2floats(i: Instruction):
+    stack_inst(iint2float, i, 1)
+
+def ifloat2ints(i: Instruction):
+    stack_inst(ifloat2int, i, 1)
