@@ -1,8 +1,6 @@
 from classes import *
 from base import *
-#from base import get_frame
 
-# Instruction functions
 def imove(i: Instruction):
     if i.arg1.type != "var":
         error.argtype()
@@ -11,13 +9,14 @@ def imove(i: Instruction):
         error.novar()
     
     if i.arg2.type == "var":
-        if not is_var_defined(i.arg2.val):
+        if not is_var_declared(i.arg1):
             error.novar()
-        get_var(i.arg1).val = get_var(i.arg2.val).val
+        if not is_var_defined(i.arg2):
+            error.noval()
+        get_var(i.arg1).val = get_var(i.arg2).val
     else:
         get_var(i.arg1).type  = i.arg2.type
         get_var(i.arg1).val = i.arg2.val
-
 
 def icreateframe(_: Instruction):
     g.temp_frame = {}
@@ -38,37 +37,26 @@ def idefvar(i: Instruction):
         error.argtype()
     get_frame(i.arg1)[i.arg1.val] = Expression(None, None)
 
-# TODO:
-""" def icall(i: Instruction): 
-    if i.arg1.type != "label":
-        error.argtype()
-    if not i.arg1 in labels:
-        error.sembase()
-    g.inst_index = labels[i.arg1].order - 1
+def icall(i: Instruction): 
+    ijump(i)
+    g.return_stack.append(g.instructions.index(i))
 
 def ireturn(_: Instruction):
-    g.inst_index = return_stack.pop()
+    g.inst_index = g.return_stack.pop()
 
 def ipushs(i: Instruction):
-    if i.arg1.type == "var":
-        if not is_var_defined(i.arg1):
-            error.novar()
-        data_stack.append(get_var(i.arg1))
-    else:
-        data_stack.append(Expression(i.arg1.type, i.arg1))
+    g.data_stack.append(symb(i.arg1))
 
 def ipops(i: Instruction):
     if i.arg1.type != "var":
         error.argtype()
     if not is_var_declared(i.arg1):
         error.novar()
-    if len(data_stack) == 0:
-        error.stack()
-    get_var(i.arg1).type  = data_stack[-1].type
-    get_var(i.arg1).val = data_stack[-1].val
-    data_stack.pop() """
-
-
+    if len(g.data_stack) == 0:
+        error.noval()
+    top = g.data_stack.pop()
+    get_var(i.arg1).type = top.type
+    get_var(i.arg1).val  = top.val
 
 def iadd(i: Instruction):
     arithm(i, "add")
@@ -132,45 +120,44 @@ def istri2int(i: Instruction):
     except IndexError:
         error.badstr()
 
-def iread(i: Instruction): #TODO: invalid input
+def iread(i: Instruction):
     var = i.arg1
-    if not is_var_defined(var):
+    if not is_var_declared(var):
         error.novar()
-    
-    type = i.arg2.val
-    inpstr = input()
-    if inpstr == "":
+
+    inpstr = g.input_file.readline().strip()
+    if inpstr == "": # Error
         get_var(var).type = "nil"
-        get_var(var).val = "nil"
         return
     
-    get_var(var).type  = "string"
-    get_var(var).val = inpstr
-    try:
-        if type == "int":
+    type = i.arg2.val
+    get_var(var).type = type
+    get_var(var).val  = inpstr
+
+    if   type == "int":
+        try:
             get_var(var).val = int(inpstr)
-        elif type == "bool":
-            if inpstr == "true":
-                get_var(var).val = True
-            elif inpstr == "false":
-                get_var(var).val = False
-            else:
-                get_var(var).type = "nil"
-                get_var(var).val = "nil"
-        elif type == "string":
-            pass
-        else:
-            error.badval() # TODO: maybe argtype?
-    except ValueError:
-        get_var(var).type = "nil"
-        get_var(var).val = "nil"
-    except Exception:
-        raise        
+        except ValueError: # Error
+            get_var(var).type = "nil"
+    elif type == "bool":
+        if inpstr == "true":
+            get_var(var).val = True
+        elif inpstr == "false":
+            get_var(var).val = False
+        else: # Error
+            get_var(var).type = "nil"
+    elif type == "string":
+        try:
+            get_var(var).val = parse_string(inpstr)
+        except Exception: # Error
+            get_var(var).type = "nil"
+    else:
+        error.badval() # TODO: maybe argtype?
 
 def iwrite(i: Instruction, outstream=sys.stdout):
     v1 = symb(i.arg1)
     out = ""
-    if v1.type == "int" or v1.type == "string":
+    if   v1.type == "int" or v1.type == "string":
         out = v1.val
     elif v1.type == "bool":
         out = str(v1.val).lower()
@@ -271,9 +258,9 @@ def iexit(i: Instruction):
         error.argtype()
 
     if v1.val < 0 or v1.val > 49:
-        error.badval()
+        error.badval("Invalid error code")
     
-    g.exit_code = v1.val
+    error.code = v1.val
     g.inst_index = len(g.instructions)
     
 def idprint(i: Instruction):

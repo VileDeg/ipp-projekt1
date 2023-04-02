@@ -13,16 +13,10 @@
 <body>
     <h1 style="text-align: center;">Test result</h1>
     <h2>Tests run: 134</h2>
-    <h2>Passed: 48 </h2>
-    <h2>Failed: 86 </h2>
+    <h2>Passed: 51 </h2>
+    <h2>Failed: 83 </h2>
     <hr>
     <h3 style="text-align: center; color:red">Failed tests</h3><hr><h4>../ipp-2023-tests/interpret-only/valid</h4><table><tr><th>Test name</th><th>Return code</th><th>Expected return code</th><th>Output</th><th>Expected output</th></tr>
-<tr><td>exit</td><td>0</td><td>42</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50></textarea></td></tr>
-
-<tr><td>label_call_return</td><td>0</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>Oh,yeah,motherfucker!</textarea></td></tr>
-
-<tr><td>read</td><td>32</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>42just a string!true</textarea></td></tr>
-
 <tr><td>stack_test</td><td>0</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>ahoj světe</textarea></td></tr>
 
 <tr><td>type</td><td>54</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>int</textarea></td></tr>
@@ -144,7 +138,7 @@ Zadejte vaši operaci (+,-,*,/) nebo e pro ukončení:</textarea></td></tr>
 
 <tr><td>float_accepted_numbers4</td><td>32</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>0x1.0000000000000p+00x1.0000000000000p+0</textarea></td></tr>
 
-<tr><td>float_accepted_numbers5</td><td>32</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>0x1.0000000000000p+00x1.0000000000000p+0</textarea></td></tr>
+<tr><td>float_accepted_numbers5</td><td>57</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>0x1.0000000000000p+00x1.0000000000000p+0</textarea></td></tr>
 
 <tr><td>float_accepted_numbers6</td><td>32</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>-0x1.175c57117ca21p+270x1.0000000000000p-4</textarea></td></tr>
 
@@ -200,9 +194,9 @@ Zadejte vaši operaci (+,-,*,/) nebo e pro ukončení:</textarea></td></tr>
 
 <tr><td>float_pushs</td><td>32</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>0x1.2000000000000p+0</textarea></td></tr>
 
-<tr><td>float_read</td><td>32</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>0x1.2000000000000p+0</textarea></td></tr>
+<tr><td>float_read</td><td>57</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>0x1.2000000000000p+0</textarea></td></tr>
 
-<tr><td>float_read_wrongfloat</td><td>32</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50></textarea></td></tr>
+<tr><td>float_read_wrongfloat</td><td>54</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50></textarea></td></tr>
 
 <tr><td>float_sub_float_float</td><td>32</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td><td><textarea readonly rows=5 cols=50>0x0.0p+0</textarea></td></tr>
 
@@ -249,6 +243,12 @@ Zadejte vaši operaci (+,-,*,/) nebo e pro ukončení:</textarea></td></tr>
 <tr><td>defvar_move</td><td>0</td><td><textarea readonly rows=5 cols=50>42</textarea></td></tr>
 
 <tr><td>dprint</td><td>0</td><td><textarea readonly rows=5 cols=50></textarea></td></tr>
+
+<tr><td>exit</td><td>42</td><td><textarea readonly rows=5 cols=50></textarea></td></tr>
+
+<tr><td>label_call_return</td><td>0</td><td><textarea readonly rows=5 cols=50>Oh,yeah,motherfucker!</textarea></td></tr>
+
+<tr><td>read</td><td>0</td><td><textarea readonly rows=5 cols=50>42just a string!true</textarea></td></tr>
 
 <tr><td>write</td><td>0</td><td><textarea readonly rows=5 cols=50>0abc</textarea></td></tr>
 

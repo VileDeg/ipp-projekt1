@@ -16,9 +16,9 @@ code = 0
 g = sys.modules[__name__]
 
 @err_call
-def xmlformat():
+def xmlformat(txt: str = ""):
     g.code = 31
-    raise Exception("XML format")
+    raise Exception("XML format: " + txt)
 @err_call
 def xmlstruct(txt: str = ""):
     g.code = 32
@@ -28,30 +28,30 @@ def sembase(txt: str = ""):
     g.code = 52
     raise Exception("Semantic (label/variable): " + txt)
 @err_call
-def argtype():
+def argtype(txt: str = ""):
     g.code = 53
-    raise Exception("Invalid argument type")
+    raise Exception("Invalid argument type: " + txt)
 @err_call
-def novar():
+def novar(txt: str = ""):
     g.code = 54
-    raise Exception("Variable not declared")
+    raise Exception("Variable not declared: " + txt)
 @err_call
-def frame():
+def frame(txt: str = ""):
     g.code = 55
-    raise Exception("Invalid or empty frame")
+    raise Exception("Invalid or empty frame: " + txt)
 @err_call
-def noval():
+def noval(txt: str = ""):
     g.code = 56
-    raise Exception("TODO:") #TODO: description
+    raise Exception("TODO: " + txt) #TODO: description
 @err_call
-def badval():
+def badval(txt: str = ""):
     g.code = 57
-    raise Exception("Division by zero")
+    raise Exception("Division by zero: " + txt)
 @err_call
-def badstr():
+def badstr(txt: str = ""):
     g.code = 58
-    raise Exception("String:") #TODO: description
+    raise Exception("String: " + txt) #TODO: description
 @err_call
-def intern():
+def intern(txt: str = ""):
     g.code = 99
-    raise Exception("Internal")
+    raise Exception("Internal: " + txt)

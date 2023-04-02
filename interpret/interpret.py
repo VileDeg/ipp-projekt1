@@ -37,11 +37,13 @@ if __name__ == '__main__':
         print("Error: " + str(e), file=sys.stderr)
         exit(11)
 
+    exit_code = 0
     try:
-        base.initialize(source_file)
-        base.run()
+        base.initialize(input_file, source_file)
+        exit_code = base.run()
     except BaseException as e:
         print("Error: " + str(e), file=sys.stderr)
         #print(interp.error.code, file=sys.stderr)
         exit(base.error.code)
-    
+        
+    exit(exit_code)

@@ -1,3 +1,4 @@
+input_file   = None
 source_file  = None
 instructions = []
 
@@ -5,8 +6,11 @@ frame_stack = []
 glob_frame  = {}
 temp_frame  = None
 
-labels     = {} # {label_name: instruction}
-inst_index = 0
+data_stack  = []
+
+inst_index   = 0
+labels       = {} # {label_name: inst_index}
+return_stack = [] # list of inst_index
 
 # Insctruction names and number of arguments
 opcodes = {

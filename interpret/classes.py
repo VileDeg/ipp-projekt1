@@ -9,6 +9,25 @@ class Expression:
         self.type = type
         self.val  = val
 
+def parse_string(s: str):
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == '\\':
+            if i + 3 >= len(s):
+                raise Exception("Invalid escape sequence")
+            seq = ""
+            j = i + 1
+            while j - i < 4:
+                cc = s[j]
+                if cc not in "0123456789":
+                    raise Exception("Invalid escape sequence")
+                seq += cc
+                j += 1
+            s = s[:i] + chr(int(seq)) + s[j:]
+        i += 1
+    return s
+
 class Operand(Expression):
     def __init__(self, type: str, text: str):
         super().__init__(type, None)
@@ -17,8 +36,16 @@ class Operand(Expression):
         if type == "int":
             try:
                 self.val = int(text)
-            except Exception as e:
-                raise e
+            except Exception:
+                raise
+        elif type == "float":
+            try:
+                self.val = float.fromhex(text)
+            except Exception:
+                try:
+                    self.val = float(text)
+                except Exception:
+                    raise
         elif type == "bool":
             if text == "true":
                 self.val = True
@@ -37,24 +64,8 @@ class Operand(Expression):
             elif text[0:3] == "TF@":
                 self.frame = Frame.TEMPORARY
         elif type == "string":
-            i = 0
-            while i < len(text):
-                c = text[i]
-                if c == '\\':
-                    if i + 3 >= len(text):
-                        raise Exception("Invalid escape sequence")
-                    seq = ""
-                    j = i + 1
-                    while j - i < 4:
-                        cc = text[j]
-                        if cc not in "0123456789":
-                            raise Exception("Invalid escape sequence")
-                        seq += cc
-                        j += 1
-                    text = text[:i] + chr(int(seq)) + text[j:]
-                i += 1
-            self.val = text
-        elif type == "label":
+            self.val = parse_string(text)
+        elif type == "label" or type == "type":
             self.val = text
         else:
             raise Exception("Invalid type")

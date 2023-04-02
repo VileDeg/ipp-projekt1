@@ -13,7 +13,7 @@ DEBUG = False
 def log(s):
     if DEBUG:
         print(s)
-    
+
 def parse_xml(xml_tree: et.ElementTree):
     prog = xml_tree.getroot()
     if prog.tag != "program":
@@ -55,7 +55,7 @@ def parse_xml(xml_tree: et.ElementTree):
                 error.xmlstruct()
                 
             arg_type = arg.attrib['type'] #.lower()
-            if arg_type not in ["int", "bool", "string", "nil", "label", "type", "var"]:
+            if arg_type not in ["int", "float", "bool", "string", "nil", "label", "type", "var"]:
                 error.xmlstruct("Invalid argument type")
 
             arglist.append((arg_type, arg.text, int(arg.tag[3])))
@@ -86,8 +86,9 @@ def parse_xml(xml_tree: et.ElementTree):
     # sort intructions by order
     g.instructions.sort(key=lambda x: x.order)
 
-def initialize(source_file: io.TextIOWrapper):
-    g.source_file  = source_file
+def initialize(input_file: io.TextIOWrapper, source_file: io.TextIOWrapper):
+    g.input_file  = input_file
+    g.source_file = source_file
 
     try:
         xml_tree = et.parse(g.source_file)
@@ -147,10 +148,12 @@ def var_symb_symb(i: Instruction):
 def arithm(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
     
-    if v1.type != "int" or v2.type != "int":
+    if v1.type != v2.type:
+        error.argtype()
+    if v1.type != "int" or v1.type != "float":
         error.argtype()
 
-    get_var(i.arg1).type = "int"
+    get_var(i.arg1).type = v1.type
     if   op == "add":
         get_var(i.arg1).val = v1.val + v2.val
     elif op == "sub":
@@ -158,9 +161,17 @@ def arithm(i: Instruction, op: str):
     elif op == "mul":
         get_var(i.arg1).val = v1.val * v2.val
     elif op == "idiv":
+        if v1.type != "int":
+            error.argtype()
         if v2.val == 0:
             error.badval()
         get_var(i.arg1).val = v1.val // v2.val
+    elif op == "div":
+        if v1.type != "float":
+            error.argtype()
+        if v2.val == 0:
+            error.badval()
+        get_var(i.arg1).val = v1.val / v2.val
     else:
         error.intern()
 
@@ -200,9 +211,6 @@ def label_pass():
     for inst in g.instructions:
         if inst.opcode == "label":
             I.ilabel(inst)
-            # if inst.arg1.val in g.labels:
-            #     error.sembase("Label already defined")
-            # g.labels[inst.arg1.val] = inst.order
 
 def run():
     label_pass()
@@ -218,3 +226,5 @@ def run():
         except Exception:
             raise
         g.inst_index += 1
+
+    return error.code
