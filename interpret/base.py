@@ -1,6 +1,5 @@
 import io
 import re
-import sys
 import xml.etree.ElementTree as et
 
 from classes import *
@@ -57,6 +56,9 @@ def parse_xml(xml_tree: et.ElementTree):
             arg_type = arg.attrib['type'] #.lower()
             if arg_type not in ["int", "float", "bool", "string", "nil", "label", "type", "var"]:
                 error.xmlstruct("Invalid argument type")
+            # Empty string edge case
+            if arg_type == "string" and arg.text == None:
+                arg.text = ""
 
             arglist.append((arg_type, arg.text, int(arg.tag[3])))
 
@@ -119,31 +121,24 @@ def get_var(op: Operand):
     except KeyError:
         error.novar() 
 
-# def is_var_declared(op: Operand):
-#     return op.val in get_frame(op)
+# def is_var_defined(op: Operand):
+#     return get_var(op).val != None
 
-def is_var_defined(op: Operand):
-    #if is_var_declared(op):
-    return get_var(op).val != None
-
-def get_var_if_def(op: Operand, declared_only):
-    # if not is_var_declared(op):
-    #     error.novar()
-    if not declared_only and not is_var_defined(op):
-        error.noval()
-    return get_var(op)
+# def get_var_if_def(op: Operand, declared_only):
+#     if not declared_only and get_var(op).val == None:
+#         error.noval()
+#     return get_var(op)
 
 def symb(op: Operand, declared_only=False):
     if op.type == "var":
-        return get_var_if_def(op, declared_only)
+        if not declared_only and get_var(op).val == None:
+            error.noval()
+        #return get_var_if_def(op, declared_only)
+        return get_var(op)
     else:
         return Expression(op.type, op.val)
 
 def var_symb(i: Instruction):
-    #if not is_var_declared(i.arg1):
-    #    error.novar()
-    
-    # Added check for var type TODO:
     if i.arg1.type != "var":
         error.argtype()
 
@@ -158,31 +153,9 @@ def var_symb_symb(i: Instruction):
 
     return v1, v2
 
-def nil_conv(v1: Operand, v2: Operand):
-    # if v2.type == "int":
-    #     v1.type = "int"
-    #     v1.val = 0
-    # elif v2.type == "float":
-    #     v1.type = "float"
-    #     v1.val = 0.0
-    if v2.type == "bool":
-        v1.type = "bool"
-        v1.val = False
-    elif v2.type == "string":
-        v1.type = "string"
-        v1.val = ""
-
-def symb_symb_nil_conv(v1: Operand, v2: Operand):
-    if v1.type == "nil":
-        nil_conv(v1, v2)
-    elif v2.type == "nil":
-        nil_conv(v2, v1)
-
 def arithm(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
 
-    #symb_symb_nil_conv(v1, v2)
-    
     if v1.type != v2.type:
         error.argtype()
     if v1.type != "int" and v1.type != "float":
@@ -237,8 +210,6 @@ def relational(i: Instruction, op: str):
 def and_or(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
 
-    #symb_symb_nil_conv(v1, v2)
-
     if v1.type != "bool" or v2.type != "bool":
         error.argtype()
     
@@ -249,6 +220,24 @@ def and_or(i: Instruction, op: str):
         get_var(i.arg1).val = v1.val or  v2.val
     else:
         error.intern()
+
+def jump(i: Instruction, op: str):
+    lb = i.arg1.val
+    if not lb in g.labels:
+        error.sembase()
+    if op == "j":
+        g.inst_index = g.labels[lb] # jump
+    elif op == "je" or op == "jne":
+        v1, v2 = symb(i.arg2), symb(i.arg3)
+        if v1.type == "nil" or v2.type == "nil":
+            if (v1.type == v2.type) == (op == "je"):
+                g.inst_index = g.labels[lb]  # jump
+            return
+        
+        if v1.type != v2.type:
+            error.argtype()
+        if (v1.val == v2.val) == (op == "je"):
+            g.inst_index = g.labels[lb] # jump
 
 def stack_inst(func, i: Instruction, argc: int):
     i.arg1 = g.stack_var

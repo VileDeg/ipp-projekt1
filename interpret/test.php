@@ -567,7 +567,7 @@ while($file != NULL) {
         $outputFile = $srcFile."_tempOut.xml";
         $deltaFile = $srcFile."_tempDelta.xml";
 
-        $cmd = "php ". $flag_parseScriptFile ." < ". $srcFile .".src";
+        $cmd = "php8.1 ". $flag_parseScriptFile ." < ". $srcFile .".src";
 
         // Execute parser
         exec($cmd, $output, $rc);
@@ -633,7 +633,7 @@ while($file != NULL) {
         $srcFile = $file->srcFile->getName();
         $outputFile = $srcFile."_tempOut.temp";
 
-        $cmd = "php ".$flag_parseScriptFile." < ".$srcFile.".src | python3 ".$flag_intScriptFile." --input=".$srcFile.".in > ".$outputFile;
+        $cmd = "php8.1 ".$flag_parseScriptFile." < ".$srcFile.".src | python3 ".$flag_intScriptFile." --input=".$srcFile.".in > ".$outputFile;
 
         // Execute parser and interpreter
         exec($cmd, $output, $rc);

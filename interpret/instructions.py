@@ -1,3 +1,5 @@
+import sys
+
 from classes import *
 from base import *
 
@@ -5,18 +7,6 @@ def imove(i: Instruction):
     v1 = symb(i.arg2)
     get_var(i.arg1).type = v1.type
     get_var(i.arg1).val = v1.val
-    # if not is_var_declared(i.arg1):
-    #     error.novar()
-    
-    #if i.arg2.type == "var":
-        # if not is_var_declared(i.arg1):
-        #     error.novar()
-    #     if not is_var_defined(i.arg2):
-    #         error.noval()
-    #     get_var(i.arg1).val = get_var(i.arg2).val
-    # else:
-    #     get_var(i.arg1).type  = i.arg2.type
-    #     get_var(i.arg1).val = i.arg2.val
 
 def icreateframe(_: Instruction):
     g.temp_frame = {}
@@ -35,6 +25,9 @@ def ipopframe(_: Instruction):
 def idefvar(i: Instruction):
     if i.arg1.type != "var":
         error.argtype()
+    if i.arg1.val in get_frame(i.arg1):
+        error.sembase("Variable is already defined.")
+
     get_frame(i.arg1)[i.arg1.val] = Expression(None, None)
 
 def icall(i: Instruction): 
@@ -42,6 +35,8 @@ def icall(i: Instruction):
     g.return_stack.append(g.instructions.index(i))
 
 def ireturn(_: Instruction):
+    if len(g.return_stack) == 0:
+        error.noval()
     g.inst_index = g.return_stack.pop()
 
 def ipushs(i: Instruction):
@@ -50,8 +45,6 @@ def ipushs(i: Instruction):
 def ipops(i: Instruction):
     if i.arg1.type != "var":
         error.argtype()
-    # if not is_var_declared(i.arg1):
-    #     error.novar()
     if len(g.data_stack) == 0:
         error.noval()
     top = g.data_stack.pop()
@@ -118,21 +111,23 @@ def istri2int(i: Instruction):
     
     var = i.arg1
     get_var(var).type = "int"
+    if v2.val < 0 or v2.val >= len(v1.val):
+        error.badstr()
     try:
-        get_var(var).val = ord(v1.val[int(v2.val)])
+        get_var(var).val = ord(v1.val[v2.val]) # int(v2.val)
     except IndexError:
         error.badstr()
 
 def iread(i: Instruction):
     var = i.arg1
-    # if not is_var_declared(var):
-    #     error.novar()
 
-    inpstr = g.input_file.readline().strip()
-    get_var(var).val  = inpstr
-    if inpstr == "": # Error
+    inp = g.input_file.readline()
+    if inp == "":
         get_var(var).type = "nil"
+        get_var(var).val  = "nil"
         return
+    inpstr = inp.strip()
+    get_var(var).val  = inpstr
     
     type = i.arg2.val
     get_var(var).type = type
@@ -143,12 +138,12 @@ def iread(i: Instruction):
         except ValueError: # Error
             get_var(var).type = "nil"
     elif type == "bool":
-        if inpstr == "true":
+        if inpstr.lower() == "true":
             get_var(var).val = True
-        elif inpstr == "false":
+        else:
             get_var(var).val = False
-        else: # Error
-            get_var(var).type = "nil"
+        # else: # Error
+        #     get_var(var).type = "nil"
     elif type == "string":
         try:
             get_var(var).val = parse_string(inpstr)
@@ -208,27 +203,32 @@ def igetchar(i: Instruction):
     
     var = i.arg1
     get_var(var).type = "string"
-    try:
-        get_var(var).val = v1.val[int(v2.val)]
-    except IndexError:
-        error.badstr()
+    if v2.val < 0 or v2.val >= len(v1.val):
+        error.badstr("Index out of range.")
+    get_var(var).val = v1.val[v2.val]
 
 def isetchar(i: Instruction):
     v1, v2 = var_symb_symb(i)
 
+    var = i.arg1
+    if get_var(var).val == None:
+        error.noval()
+    if get_var(var).type != "string":
+        error.argtype()
     if v1.type != "int" or v2.type != "string":
         error.argtype()
-    
-    var = i.arg1
-    try:
-        get_var(var).val[v1.val] = v2.val[0]
-    except IndexError:
-        error.badstr()
+
+    if v2.val == "":
+        error.badstr("Empty string.")
+    if v1.val < 0 or v1.val >= len(get_var(var).val):
+        error.badstr("Index out of range.")
+
+    tmplist = list(get_var(var).val)
+    tmplist[v1.val] = v2.val[0]
+    get_var(var).val = "".join(tmplist)
 
 def itype(i: Instruction):
     var = i.arg1
-    # if not is_var_declared(var):
-    #     error.novar()
 
     v1 = symb(i.arg2, True)
 
@@ -243,40 +243,18 @@ def ilabel(i: Instruction):
     if i.arg1.type != "label":
         error.argtype()
     lb = i.arg1.val
-    #print(f"{g.labels=}")
     if lb in g.labels:
         error.sembase("Label already defined")
     g.labels[lb] = g.instructions.index(i)
 
 def ijump(i: Instruction):
-    lb = i.arg1.val
-    if not lb in g.labels:
-        error.sembase()
-    g.inst_index = g.labels[lb]
+    jump(i, "j")
 
 def ijumpifeq(i: Instruction):
-    v1, v2 = symb(i.arg2), symb(i.arg3)
-    if v1.type == "nil" or v2.type == "nil":
-        if v1.type == v2.type:
-            ijump(i)
-        return
-
-    if v1.type != v2.type: # TODO: nil
-        error.argtype()
-    if v1.val == v2.val:
-        ijump(i)
+    jump(i, "je")
 
 def ijumpifneq(i: Instruction):
-    v1, v2 = symb(i.arg2), symb(i.arg3)
-    if v1.type == "nil" or v2.type == "nil":
-        if v1.type != v2.type:
-            ijump(i)
-        return
-
-    if v1.type != v2.type: # TODO: nil
-        error.argtype()
-    if v1.val != v2.val:
-        ijump(i)
+    jump(i, "jne")
 
 def iexit(i: Instruction):
     v1 = symb(i.arg1)

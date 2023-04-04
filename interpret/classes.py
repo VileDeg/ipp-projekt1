@@ -11,20 +11,23 @@ class Expression:
 
 def parse_string(s: str):
     i = 0
-    while i < len(s):
+    l = len(s)
+    while i < l:
         c = s[i]
-        if c == '\\':
-            if i + 3 >= len(s):
-                raise Exception("Invalid escape sequence")
+        if c == '\\' and i + 3 < len(s):
             seq = ""
+            isseq = True
             j = i + 1
             while j - i < 4:
                 cc = s[j]
                 if cc not in "0123456789":
-                    raise Exception("Invalid escape sequence")
+                    isseq = False
+                    break # Not an escape sequence
                 seq += cc
                 j += 1
-            s = s[:i] + chr(int(seq)) + s[j:]
+            if isseq:
+                s = s[:i] + chr(int(seq)) + s[j:]
+                l = len(s) # Update length
         i += 1
     return s
 
