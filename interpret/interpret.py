@@ -1,6 +1,5 @@
 import sys
 import argparse
-
 import base
 
 def open_file(file_name: str, mode: str):
@@ -19,31 +18,32 @@ def parse_args():
                         help="Source code file (default: stdin)")
     args = parser.parse_args()
     if args.input == sys.stdin and args.source == sys.stdin:
-        raise Exception("At least one of --input or --source must be specified")
+        raise CLAError("At least one of --input or --source must be specified")
     return args
 
 if __name__ == '__main__':
     # Parse arguments
     try:
         args = parse_args()
-    except BaseException as e:
-        print("Error: " + str(e), file=sys.stderr)
+    except SystemExit: # --help flag was used
+        exit(0)
+    except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
         exit(10)
 
     try:    
         input_file  = open_file(args.input , "r") if args.input  != sys.stdin else sys.stdin
         source_file = open_file(args.source, "r") if args.source != sys.stdin else sys.stdin
-    except BaseException as e:
-        print("Error: " + str(e), file=sys.stderr)
+    except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
         exit(11)
 
     exit_code = 0
     try:
         base.initialize(input_file, source_file)
         exit_code = base.run()
-    except BaseException as e:
-        print("Error: " + str(e), file=sys.stderr)
-        #print(interp.error.code, file=sys.stderr)
+    except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
         exit(base.error.code)
-        
+
     exit(exit_code)
