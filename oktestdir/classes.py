@@ -35,7 +35,7 @@ class Operand(Expression):
     def __init__(self, type: str, text: str):
         super().__init__(type, None)
         self.frame = None
-
+        
         if type == "int":
             try:
                 self.val = int(text)
@@ -50,25 +50,25 @@ class Operand(Expression):
                 except Exception:
                     raise
         elif type == "bool":
-            if text == "false":
-                self.val = False
-            elif text == "true":
+            if text == "true":
                 self.val = True
+            elif text == "false":
+                self.val = False
             else:
                 raise Exception("Invalid bool value")
         elif type == "nil":
             self.val = "nil"
         elif type == "var":
             self.val   = text[3:]
-            if text.startswith("GF@"):
+            if   text[0:3] == "GF@":
                 self.frame = Frame.GLOBAL
-            elif text.startswith("LF@"):
+            elif text[0:3] == "LF@":
                 self.frame = Frame.LOCAL
-            elif text.startswith("TF@"):
+            elif text[0:3] == "TF@":
                 self.frame = Frame.TEMPORARY
         elif type == "string":
             self.val = parse_string(text)
-        elif type in {"label", "type"}:
+        elif type == "label" or type == "type":
             self.val = text
         else:
             raise Exception("Invalid type")
@@ -80,11 +80,11 @@ class Instruction:
         self.arg1, self.arg2, self.arg3 = None, None, None
     
     def add_operand(self, arg_type: str, value: str):
-        if self.arg1 is None:
+        if self.arg1 == None:
             self.arg1 = Operand(arg_type, value)
-        elif self.arg2 is None:
+        elif self.arg2 == None:
             self.arg2 = Operand(arg_type, value)
-        elif self.arg3 is None:
+        elif self.arg3 == None:
             self.arg3 = Operand(arg_type, value)
         else:
             raise Exception("Too many operands")

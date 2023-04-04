@@ -12,7 +12,7 @@ def icreateframe(_: Instruction):
     g.temp_frame = {}
 
 def ipushframe(_: Instruction):
-    if g.temp_frame is None:
+    if g.temp_frame == None:
         error.frame()
     g.frame_stack.append(g.temp_frame)
     g.temp_frame = None
@@ -128,23 +128,28 @@ def iread(i: Instruction):
         return
     inpstr = inp.strip()
     get_var(var).val  = inpstr
+    
+    type = i.arg2.val
+    get_var(var).type = type
 
-    atype = i.arg2.val
-    get_var(var).type = atype
-
-    if atype == "int":
+    if   type == "int":
         try:
             get_var(var).val = int(inpstr)
         except ValueError: # Error
             get_var(var).type = "nil"
-    elif atype == "bool":
-        get_var(var).val = inpstr.lower() == "true"
-    elif atype == "string":
+    elif type == "bool":
+        if inpstr.lower() == "true":
+            get_var(var).val = True
+        else:
+            get_var(var).val = False
+        # else: # Error
+        #     get_var(var).type = "nil"
+    elif type == "string":
         try:
             get_var(var).val = parse_string(inpstr)
         except Exception: # Error
             get_var(var).type = "nil"
-    elif atype == "float":
+    elif type == "float":
         try:
             get_var(var).val = float.fromhex(inpstr)
         except Exception: # Error
@@ -158,13 +163,15 @@ def iread(i: Instruction):
 def iwrite(i: Instruction, outstream=sys.stdout):
     v1 = symb(i.arg1)
     out = ""
-    if v1.type in ["int", "string"]:
+    if   v1.type == "int" or v1.type == "string":
         out = v1.val
     elif v1.type == "float":
         out = str(float.hex(v1.val))
     elif v1.type == "bool":
         out = str(v1.val).lower()
-    elif v1.type != "nil":
+    elif v1.type == "nil":
+        pass
+    else:
         error.argtype()
     print(out, file=outstream, end="")
 
@@ -204,7 +211,7 @@ def isetchar(i: Instruction):
     v1, v2 = var_symb_symb(i)
 
     var = i.arg1
-    if get_var(var).val is None:
+    if get_var(var).val == None:
         error.noval()
     if get_var(var).type != "string":
         error.argtype()
@@ -226,7 +233,7 @@ def itype(i: Instruction):
     v1 = symb(i.arg2, True)
 
     typestr = v1.type
-    if typestr is None:
+    if typestr == None:
         typestr = ""
 
     get_var(var).type  = "string"

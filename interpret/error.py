@@ -3,6 +3,55 @@ import sys
 code = 0
 g = sys.modules[__name__]
 
+class IPPError(Exception):
+    def __init__(self, message, error_code):
+        super().__init__(f"Error: {message}")
+        self.error_code = error_code
+    def catch(self):
+        print(self, file=sys.stderr)
+        exit(self.error_code)
+
+class CLAError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"Command line arguments: {message}", 10)
+
+class XMLFormatError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"XML format: {message}", 31)
+
+class XMLStructureError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"XML structure: {message}", 32)
+
+class SemanticBaseError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"Semantic (label/variable): {message}", 52)
+
+class ArgumentTypeError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"Invalid argument type: {message}", 53)
+
+class VariableNotDeclaredError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"Variable not declared: {message}", 54)
+
+class InvalidOrEmptyFrameError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"Invalid or empty frame: {message}", 55)
+
+class MissingValueError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"Missing value: {message}", 56)
+
+class DivisionByZeroError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"Division by zero: {message}", 57)
+
+class StringError(IPPError):
+    def __init__(self, message):
+        super().__init__(f"String: {message}", 58)
+
+
 def xmlformat(txt: str = ""):
     g.code = 31
     raise Exception("XML format: " + txt)

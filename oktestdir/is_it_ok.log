@@ -1,6 +1,14 @@
 Archive:  xgonce00.zip
   inflating: parse.php               
   inflating: readme1.md              
+  inflating: interpret.py            
+  inflating: base.py                 
+  inflating: classes.py              
+  inflating: error.py                
+  inflating: globals.py              
+  inflating: instructions.py         
+  inflating: readme2.md              
+ extracting: rozsireni               
 Name:
 	parse.php - IPPcode23 code parser.
 
@@ -13,3 +21,12 @@ Description:
 Options:
 	--help
 		Prints the help message.
+usage: interpret.py [-h] [--input INPUT_FILE] [--source SOURCE_FILE]
+
+Interpreter for IPPcode23. Reads XML from stdin and interprets it.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --input INPUT_FILE    Input stream/file (default: stdin)
+  --source SOURCE_FILE  Source code file (default: stdin)
+dos2unix: converting file rozsireni to file rozsireni.lf in Unix format...
