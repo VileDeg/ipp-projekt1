@@ -1,4 +1,5 @@
 from enum import Enum
+
 class Frame(Enum):
     GLOBAL = 1
     LOCAL = 2
@@ -55,7 +56,7 @@ class Operand(Expression):
             elif text == "true":
                 self.val = True
             else:
-                raise Exception("Invalid bool value")
+                raise ValueError("Invalid bool value")
         elif type == "nil":
             self.val = "nil"
         elif type == "var":
@@ -71,7 +72,7 @@ class Operand(Expression):
         elif type in {"label", "type"}:
             self.val = text
         else:
-            raise Exception("Invalid type")
+            raise TypeError("Invalid type")
 
 class Instruction:
     def __init__(self, order: int, opcode: str):
@@ -87,5 +88,5 @@ class Instruction:
         elif self.arg3 is None:
             self.arg3 = Operand(arg_type, value)
         else:
-            raise Exception("Too many operands")
+            raise RuntimeError("Too many operands")
 

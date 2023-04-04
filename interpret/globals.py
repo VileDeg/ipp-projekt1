@@ -13,6 +13,8 @@ inst_index   = 0
 labels       = {} # {label_name: inst_index}
 return_stack = [] # list of inst_index
 
+exit_code = 0
+
 # Insctruction names and number of arguments
 opcodes = {
     "move" : 2, "createframe" : 0, "pushframe" : 0, "popframe" : 0, 
