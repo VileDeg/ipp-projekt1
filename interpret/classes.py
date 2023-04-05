@@ -1,3 +1,5 @@
+# File with all interpret classes
+
 from enum import Enum
 
 class Frame(Enum):
@@ -10,7 +12,7 @@ class Expression:
         self.type = type
         self.val  = val
 
-def parse_string(s: str):
+def parse_string(s: str): # Translate all escape sequences
     i = 0
     l = len(s)
     while i < l:
@@ -19,12 +21,12 @@ def parse_string(s: str):
             seq = ""
             isseq = True
             j = i + 1
-            while j - i < 4:
+            while isseq and j - i < 4:
                 cc = s[j]
-                if cc not in "0123456789":
-                    isseq = False
-                    break # Not an escape sequence
-                seq += cc
+                if cc in "0123456789":
+                    seq += cc
+                else: # Not an escape sequence
+                    isseq = False 
                 j += 1
             if isseq:
                 s = s[:i] + chr(int(seq)) + s[j:]
@@ -40,28 +42,28 @@ class Operand(Expression):
         if type == "int":
             try:
                 self.val = int(text)
-            except Exception:
-                raise
+            except Exception as e:
+                raise RuntimeError("Invalid int value") from e
         elif type == "float":
             try:
                 self.val = float.fromhex(text)
             except Exception:
                 try:
                     self.val = float(text)
-                except Exception:
-                    raise
+                except Exception as e:
+                    raise RuntimeError("Invalid float value") from e
         elif type == "bool":
             if text == "false":
                 self.val = False
             elif text == "true":
                 self.val = True
             else:
-                raise ValueError("Invalid bool value")
+                raise RuntimeError("Invalid bool value")
         elif type == "nil":
             self.val = "nil"
         elif type == "var":
             self.val   = text[3:]
-            if text.startswith("GF@"):
+            if   text.startswith("GF@"):
                 self.frame = Frame.GLOBAL
             elif text.startswith("LF@"):
                 self.frame = Frame.LOCAL
@@ -72,7 +74,7 @@ class Operand(Expression):
         elif type in {"label", "type"}:
             self.val = text
         else:
-            raise TypeError("Invalid type")
+            raise RuntimeError("Invalid type")
 
 class Instruction:
     def __init__(self, order: int, opcode: str):
@@ -81,7 +83,7 @@ class Instruction:
         self.arg1, self.arg2, self.arg3 = None, None, None
     
     def add_operand(self, arg_type: str, value: str):
-        if self.arg1 is None:
+        if   self.arg1 is None:
             self.arg1 = Operand(arg_type, value)
         elif self.arg2 is None:
             self.arg2 = Operand(arg_type, value)

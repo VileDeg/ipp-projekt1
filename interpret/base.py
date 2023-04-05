@@ -1,25 +1,27 @@
+# Central module of the interpreter
+
 import io
 import re
 import xml.etree.ElementTree as et
 
 from classes import *
-
 from error import *
+
 import globals as g
 
 def parse_xml(xml_tree: et.ElementTree):
     prog = xml_tree.getroot()
     if prog.tag != "program":
         raise XMLStructureError()
-    ra = list(prog.attrib.keys())
-    if 'language' not in ra and prog.attrib['language'] != "IPPcode23":
+    pa = list(prog.attrib.keys())
+    if 'language' not in pa and prog.attrib['language'] != "IPPcode23":
         raise XMLStructureError()
 
     for inst in prog:
         if inst.tag != "instruction":
             raise XMLStructureError()
-        ca = list(inst.attrib.keys())
-        if 'order' not in ca or 'opcode' not in ca:
+        ia = list(inst.attrib.keys())
+        if 'order' not in ia or 'opcode' not in ia:
             raise XMLStructureError()
         try:
             order = int(inst.attrib['order'])
@@ -32,7 +34,7 @@ def parse_xml(xml_tree: et.ElementTree):
         if opcode not in g.opcodes:
             raise XMLStructureError("Invalid opcode")
 
-        # create instruction object
+        # Create instruction object
         inst_obj = Instruction(order, opcode)
 
         arglist = []
@@ -42,8 +44,8 @@ def parse_xml(xml_tree: et.ElementTree):
                 raise XMLStructureError("Too many arguments")
             if not re.match(r"arg[1-3]", arg.tag):
                 raise XMLStructureError("Invalid argument tag")
-            sa = list(arg.attrib.keys())
-            if 'type' not in sa:
+            aa = list(arg.attrib.keys())
+            if 'type' not in aa:
                 raise XMLStructureError()
 
             arg_type = arg.attrib['type'] #.lower()
@@ -64,19 +66,19 @@ def parse_xml(xml_tree: et.ElementTree):
         for argc, triple in enumerate(arglist, start=1):
             if triple[2] != argc:
                 raise XMLStructureError("Invalid argument order")
-            # add operand to instruction
+            # Add operand to instruction
             try:
                 inst_obj.add_operand(triple[0], triple[1])
-            except Exception as e:
+            except RuntimeError as e:
                 raise XMLStructureError(str(e)) from e
-        # add instruction to list
+        # Add instruction to list
         g.instructions.append(inst_obj)
 
-    # check for duplicates in instruction orders
+    # Check for duplicates in instruction orders
     orders = [i.order for i in g.instructions]
     if len(orders) != len(set(orders)):
         raise XMLStructureError("Duplicate instruction order")
-    # sort intructions by order
+    # Sort intructions by order
     g.instructions.sort(key=lambda x: x.order)
 
 def initialize(input_file: io.TextIOWrapper, source_file: io.TextIOWrapper):

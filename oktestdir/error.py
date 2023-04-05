@@ -1,44 +1,51 @@
+# File with custom exception classes
+
 import sys
 
-code = 0
-g = sys.modules[__name__]
+class IPP23Error(Exception): # Base class for custom errors
+    def __init__(self, message, error_code):
+        super().__init__(f"Error: {message}")
+        self.error_code = error_code
+    def catch(self):
+        print(self, file=sys.stderr)
+        exit(self.error_code)
 
-def xmlformat(txt: str = ""):
-    g.code = 31
-    raise Exception("XML format: " + txt)
+class XMLFormatError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"XML format: {message}", 31)
 
-def xmlstruct(txt: str = ""):
-    g.code = 32
-    raise Exception("XML structure: " + txt)
+class XMLStructureError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"XML structure: {message}", 32)
 
-def sembase(txt: str = ""):
-    g.code = 52
-    raise Exception("Semantic (label/variable): " + txt)
+class SemanticCommonError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"Semantic (label/variable): {message}", 52)
 
-def argtype(txt: str = ""):
-    g.code = 53
-    raise Exception("Invalid argument type: " + txt)
+class ArgumentTypeError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"Invalid argument type: {message}", 53)
 
-def novar(txt: str = ""):
-    g.code = 54
-    raise Exception("Variable not declared: " + txt)
+class VariableNotDeclaredError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"Variable not declared: {message}", 54)
 
-def frame(txt: str = ""):
-    g.code = 55
-    raise Exception("Invalid or empty frame: " + txt)
+class InvalidOrEmptyFrameError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"Invalid or empty frame: {message}", 55)
 
-def noval(txt: str = ""):
-    g.code = 56
-    raise Exception("Missing value: " + txt)
+class MissingValueError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"Missing value: {message}", 56)
 
-def badval(txt: str = ""):
-    g.code = 57
-    raise Exception("Division by zero: " + txt)
+class InvalidValueError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"Division by zero: {message}", 57)
 
-def badstr(txt: str = ""):
-    g.code = 58
-    raise Exception("String: " + txt)
+class StringError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"String: {message}", 58)
 
-def intern(txt: str = ""):
-    g.code = 99
-    raise Exception("Internal: " + txt)
+class InternalError(IPP23Error):
+    def __init__(self, message: str = ""):
+        super().__init__(f"Internal: {message}", 99)

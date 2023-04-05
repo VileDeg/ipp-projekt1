@@ -1,3 +1,5 @@
+# File with insctructions used by base.py
+
 import sys
 
 from classes import *
@@ -140,10 +142,7 @@ def iread(i: Instruction):
     elif atype == "bool":
         get_var(var).val = inpstr.lower() == "true"
     elif atype == "string":
-        try:
-            get_var(var).val = parse_string(inpstr)
-        except Exception: # Error
-            get_var(var).type = "nil"
+        get_var(var).val = parse_string(inpstr)
     elif atype == "float":
         try:
             get_var(var).val = float.fromhex(inpstr)

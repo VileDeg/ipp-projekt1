@@ -1,8 +1,9 @@
 import sys
 import argparse
-import base
 
-from error import *
+import base # Central module of the interpreter
+ 
+from error import * # Error classes
 
 if __name__ == '__main__':
     # Parse arguments
@@ -15,13 +16,10 @@ if __name__ == '__main__':
                             help="Source code file (default: stdin)")
         args = parser.parse_args()
         if args.input == sys.stdin and args.source == sys.stdin:
-            raise CLAError("At least one of --input or --source must be specified")
+            print("Error: At least one of --input or --source must be specified", file=sys.stderr)
+            exit(10)
     except SystemExit: # --help flag was used
         exit(0)
-    except CLAError as e:
-        e.catch()
-        # print(f"Error: {str(e)}", file=sys.stderr)
-        # exit(10)
 
     try:    
         input_file  = open(args.input , "r", encoding="UTF-8") if args.input  != sys.stdin else sys.stdin
@@ -30,11 +28,11 @@ if __name__ == '__main__':
         print(f"Error: {str(e)}", file=sys.stderr)
         exit(11)
 
-    exit_code = 0
-    try:
+    exit_code = 0 # Exit code of "exit" instruction
+    try: # Parse XML and run instructions
         base.initialize(input_file, source_file)
         exit_code = base.run()
     except IPP23Error as e:
-        e.catch()
+        e.catch() # Print error message and exit
 
     exit(exit_code)

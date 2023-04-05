@@ -1,16 +1,14 @@
+# File with custom exception classes
+
 import sys
 
-class IPP23Error(Exception):
+class IPP23Error(Exception): # Base class for custom errors
     def __init__(self, message, error_code):
         super().__init__(f"Error: {message}")
         self.error_code = error_code
     def catch(self):
         print(self, file=sys.stderr)
         exit(self.error_code)
-
-class CLAError(IPP23Error):
-    def __init__(self, message: str = ""):
-        super().__init__(f"Command line arguments: {message}", 10)
 
 class XMLFormatError(IPP23Error):
     def __init__(self, message: str = ""):

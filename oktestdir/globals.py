@@ -1,17 +1,21 @@
+# File with global variables used by base.py and instructions.py
+
 input_file   = None
 source_file  = None
 instructions = []
 
 frame_stack = []
-glob_frame  = {}
+glob_frame  = {} # (var_name: Expression)
 temp_frame  = None
 
-data_stack   = []
-stack_var = None
+data_stack = []
+stack_var  = None
 
 inst_index   = 0
-labels       = {} # {label_name: inst_index}
+labels       = {} # (label_name: inst_index)
 return_stack = [] # list of inst_index
+
+exit_code = 0
 
 # Insctruction names and number of arguments
 opcodes = {

@@ -1,91 +1,84 @@
+# Central module of the interpreter
+
 import io
 import re
 import xml.etree.ElementTree as et
 
 from classes import *
+from error import *
 
-import error
 import globals as g
-
-DEBUG = False
-
-def log(s):
-    if DEBUG:
-        print(s)
 
 def parse_xml(xml_tree: et.ElementTree):
     prog = xml_tree.getroot()
     if prog.tag != "program":
-        error.xmlstruct()
-    ra = list(prog.attrib.keys())
-    # TODO: description, name?
-    if not('language' in ra) and prog.attrib['language'] != "IPPcode23":
-        error.xmlstruct()
-    
+        raise XMLStructureError()
+    pa = list(prog.attrib.keys())
+    if 'language' not in pa and prog.attrib['language'] != "IPPcode23":
+        raise XMLStructureError()
+
     for inst in prog:
         if inst.tag != "instruction":
-            error.xmlstruct()
-        ca = list(inst.attrib.keys())
-        if not('order' in ca) or not('opcode' in ca):
-            error.xmlstruct()
+            raise XMLStructureError()
+        ia = list(inst.attrib.keys())
+        if 'order' not in ia or 'opcode' not in ia:
+            raise XMLStructureError()
         try:
             order = int(inst.attrib['order'])
-        except:
-            error.xmlstruct("Order is not an integer")
+        except ValueError as e:
+            raise XMLStructureError("Order is not an integer") from e
         if order < 1:
-            error.xmlstruct("Invalid instruction order")
+            raise XMLStructureError("Invalid instruction order")
 
         opcode = inst.attrib['opcode'].lower()
         if opcode not in g.opcodes:
-            error.xmlstruct("Invalid opcode")
+            raise XMLStructureError("Invalid opcode")
 
-        # create instruction object
+        # Create instruction object
         inst_obj = Instruction(order, opcode)
 
         arglist = []
         argc = 1
         for arg in inst:
             if argc > g.opcodes[opcode]:
-                error.xmlstruct("Too many arguments")
+                raise XMLStructureError("Too many arguments")
             if not re.match(r"arg[1-3]", arg.tag):
-                error.xmlstruct("Invalid argument tag")
-            sa = list(arg.attrib.keys())
-            if not('type' in sa):
-                error.xmlstruct()
-                
+                raise XMLStructureError("Invalid argument tag")
+            aa = list(arg.attrib.keys())
+            if 'type' not in aa:
+                raise XMLStructureError()
+
             arg_type = arg.attrib['type'] #.lower()
             if arg_type not in ["int", "float", "bool", "string", "nil", "label", "type", "var"]:
-                error.xmlstruct("Invalid argument type")
+                raise XMLStructureError("Invalid argument type")
             # Empty string edge case
-            if arg_type == "string" and arg.text == None:
+            if arg_type == "string" and arg.text is None:
                 arg.text = ""
 
             arglist.append((arg_type, arg.text, int(arg.tag[3])))
 
             argc += 1
         if argc - 1 < g.opcodes[opcode]:
-            error.xmlstruct("Too few arguments")
+            raise XMLStructureError("Too few arguments")
 
         arglist.sort(key=lambda x: x[2])
 
-        argc = 1
-        for triple in arglist:
+        for argc, triple in enumerate(arglist, start=1):
             if triple[2] != argc:
-                error.xmlstruct("Invalid argument order")
-            # add operand to instruction
+                raise XMLStructureError("Invalid argument order")
+            # Add operand to instruction
             try:
                 inst_obj.add_operand(triple[0], triple[1])
-            except Exception as e:
-                error.xmlstruct(str(e))            
-            argc += 1
-        # add instruction to list
+            except RuntimeError as e:
+                raise XMLStructureError(str(e)) from e
+        # Add instruction to list
         g.instructions.append(inst_obj)
-    
-    # check for duplicates in instruction orders
+
+    # Check for duplicates in instruction orders
     orders = [i.order for i in g.instructions]
     if len(orders) != len(set(orders)):
-        error.xmlstruct("Duplicate instruction order")
-    # sort intructions by order
+        raise XMLStructureError("Duplicate instruction order")
+    # Sort intructions by order
     g.instructions.sort(key=lambda x: x.order)
 
 def initialize(input_file: io.TextIOWrapper, source_file: io.TextIOWrapper):
@@ -94,50 +87,46 @@ def initialize(input_file: io.TextIOWrapper, source_file: io.TextIOWrapper):
 
     try:
         xml_tree = et.parse(g.source_file)
-    except:
-        error.xmlformat()
+    except et.ParseError as e:
+        raise XMLStructureError("XML parse error") from e
 
     parse_xml(xml_tree)
     g.stack_var = Operand("var", "GF@.STACK_RET")
     g.glob_frame[g.stack_var.val] = Expression(None, None)
 
 def get_frame(op: Operand):
-    if   op.frame == Frame.TEMPORARY:
-        if g.temp_frame == None:
-            error.frame()
+    if op.frame == Frame.TEMPORARY:
+        if g.temp_frame is None:
+            raise InvalidOrEmptyFrameError()
         return g.temp_frame
     elif op.frame == Frame.LOCAL:
         if len(g.frame_stack) == 0:
-            error.frame()
+            raise InvalidOrEmptyFrameError()
         return g.frame_stack[-1]
     elif op.frame == Frame.GLOBAL:
         return g.glob_frame
     else:
-        error.intern()
+        raise InternalError()
     
 def get_var(op: Operand):
     try:
         return get_frame(op)[op.val]
-    except KeyError:
-        error.novar() 
+    except KeyError as e:
+        raise VariableNotDeclaredError() from e 
 
 def symb(op: Operand, declared_only=False):
-    if op.type == "var":
-        if not declared_only and get_var(op).val == None:
-            error.noval()
-            
-        return get_var(op)
-    else:
+    if op.type != "var":
         return Expression(op.type, op.val)
+    if not declared_only and get_var(op).val is None:
+        raise MissingValueError()
+
+    return get_var(op)
 
 def var_symb(i: Instruction):
     if i.arg1.type != "var":
-        error.argtype()
+        raise ArgumentTypeError()
 
-    v1 = symb(i.arg2)
-
-    return v1
-
+    return symb(i.arg2)
 
 def var_symb_symb(i: Instruction):
     v1 = var_symb(i)
@@ -149,9 +138,9 @@ def arithm(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
 
     if v1.type != v2.type:
-        error.argtype()
-    if v1.type != "int" and v1.type != "float":
-        error.argtype()
+        raise ArgumentTypeError()
+    if v1.type not in ["int", "float"]:
+        raise ArgumentTypeError()
 
     get_var(i.arg1).type = v1.type
     if   op == "add":
@@ -162,48 +151,47 @@ def arithm(i: Instruction, op: str):
         get_var(i.arg1).val = v1.val * v2.val
     elif op == "idiv":
         if v1.type != "int":
-            error.argtype()
+            raise ArgumentTypeError()
         if v2.val == 0:
-            error.badval()
+            raise InvalidValueError()
         get_var(i.arg1).val = v1.val // v2.val
     elif op == "div":
         if v1.type != "float":
-            error.argtype()
+            raise ArgumentTypeError()
         if v2.val == 0:
-            error.badval()
+            raise InvalidValueError()
         get_var(i.arg1).val = v1.val / v2.val
     else:
-        error.intern()
+        raise InternalError()
 
 def relational(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
 
     get_var(i.arg1).type = "bool"
 
-    if op == "eq":
-        if v1.type == "nil" or v2.type == "nil":
-            get_var(i.arg1).val = v1.type == v2.type
-            return
+    if op == "eq" and (v1.type == "nil" or v2.type == "nil"):
+        get_var(i.arg1).val = v1.type == v2.type
+        return
 
     if v1.type != v2.type:
-        error.argtype()
-    if v1.type != "int" and v1.type != "string" and v1.type != "bool":
-        error.argtype()
+        raise ArgumentTypeError()
+    if v1.type not in ["int", "string", "bool"]:
+        raise ArgumentTypeError()
 
-    if   op == "lt":
-        get_var(i.arg1).val = v1.val < v2.val
+    if op == "eq":
+        get_var(i.arg1).val = v1.val == v2.val
     elif op == "gt":
         get_var(i.arg1).val = v1.val > v2.val
-    elif op == "eq":
-        get_var(i.arg1).val = v1.val == v2.val
+    elif op == "lt":
+        get_var(i.arg1).val = v1.val < v2.val
     else:
-        error.intern()
+        raise InternalError()
 
 def and_or(i: Instruction, op: str):
     v1, v2 = var_symb_symb(i)
 
     if v1.type != "bool" or v2.type != "bool":
-        error.argtype()
+        raise ArgumentTypeError()
     
     get_var(i.arg1).type = "bool"
     if   op == "and":
@@ -211,23 +199,22 @@ def and_or(i: Instruction, op: str):
     elif op == "or":
         get_var(i.arg1).val = v1.val or  v2.val
     else:
-        error.intern()
+        raise InternalError()
 
 def jump(i: Instruction, op: str):
     lb = i.arg1.val
-    if not lb in g.labels:
-        error.sembase()
+    if lb not in g.labels:
+        raise SemanticCommonError()
     if op == "j":
         g.inst_index = g.labels[lb] # jump
-    elif op == "je" or op == "jne":
+    elif op in {"je", "jne"}:
         v1, v2 = symb(i.arg2), symb(i.arg3)
         if v1.type == "nil" or v2.type == "nil":
             if (v1.type == v2.type) == (op == "je"):
                 g.inst_index = g.labels[lb]  # jump
             return
-        
         if v1.type != v2.type:
-            error.argtype()
+            raise ArgumentTypeError()
         if (v1.val == v2.val) == (op == "je"):
             g.inst_index = g.labels[lb] # jump
 
@@ -239,31 +226,29 @@ def stack_inst(func, i: Instruction, argc: int):
         i.arg3 = g.data_stack.pop()
         i.arg2 = g.data_stack.pop()
     elif argc == 3:
-        error.intern("Too many arguments for stack instruction")
+        raise InternalError("Too many arguments for stack instruction")
     func(i)
     g.data_stack.append(get_var(i.arg1))
 
-
+# Import here to avoid circular dependency
 import instructions as I
 
-def label_pass():
+def run():
+    # Label pass
     for inst in g.instructions:
         if inst.opcode == "label":
             I.ilabel(inst)
 
-def run():
-    label_pass()
-
+    # Main pass
     while g.inst_index < len(g.instructions):
         inst = g.instructions[g.inst_index]
         if inst.opcode == "label":
             g.inst_index += 1
             continue
-
         try:
-            getattr(I, "i"+inst.opcode.lower())(inst)
-        except Exception:
+            getattr(I, f"i{inst.opcode.lower()}")(inst)
+        except IPP23Error:
             raise
         g.inst_index += 1
 
-    return error.code
+    return g.exit_code
